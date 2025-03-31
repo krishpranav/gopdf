@@ -1,46 +1,41 @@
 package services
 
 import (
-	"bytes"
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 
-	"github.com/unidoc/unipdf/v3/extractor"
-	"github.com/unidoc/unipdf/v3/model"
+	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 func ExtractTextFromPDF(filePath string) (string, error) {
-	f, err := os.Open(filePath)
+	tempDir, err := ioutil.TempDir("", "pdfcpu_extract")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create temp dir: %v", err)
 	}
-	defer f.Close()
+	defer os.RemoveAll(tempDir) 
 
-	pdfReader, err := model.NewPdfReader(f)
+	err = api.ExtractContentFile(filePath, tempDir, nil, model.NewDefaultConfiguration())
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to extract text: %v", err)
 	}
 
-	numPages, err := pdfReader.GetNumPages()
+	var extractedText string
+	files, err := ioutil.ReadDir(tempDir)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read extracted files: %v", err)
 	}
 
-	var extractedText bytes.Buffer
-	for i := 1; i <= numPages; i++ {
-		page, err := pdfReader.GetPage(i)
+	for _, file := range files {
+		filePath := filepath.Join(tempDir, file.Name())
+		content, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to read extracted text file: %v", err)
 		}
-		ex, err := extractor.New(page)
-		if err != nil {
-			return "", err
-		}
-		pageText, err := ex.ExtractText()
-		if err != nil {
-			return "", err
-		}
-		extractedText.WriteString(pageText + "\n")
+		extractedText += string(content) + "\n"
 	}
 
-	return extractedText.String(), nil
+	return extractedText, nil
 }

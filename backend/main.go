@@ -4,18 +4,22 @@ import (
 	"log"
 	"os"
 
-	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
-
 	"gopdf/handlers"
 	"gopdf/utils"
+
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
-func main() {
-	if err := godotenv.Load(); err != nil {
+func init() {
+	err := godotenv.Load()
+
+	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+}
 
+func main() {
 	utils.CreateUploadDir()
 
 	r := gin.Default()

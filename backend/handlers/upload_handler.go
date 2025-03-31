@@ -14,7 +14,6 @@ import (
 
 func UploadPDF(c *gin.Context) {
 	file, err := c.FormFile("file")
-
 	if err != nil {
 		utils.HandleError(c, http.StatusBadRequest, "No file uploaded", err)
 		return
@@ -29,20 +28,20 @@ func UploadPDF(c *gin.Context) {
 		return
 	}
 
-	text, err := services.ExtractTextFromPDF(filePath)
+	extractedText, err := services.ExtractTextFromPDF(filePath)
 	if err != nil {
 		utils.HandleError(c, http.StatusInternalServerError, "Failed to extract text", err)
 		return
 	}
 
-	response, err := services.SendToChatGPT(text)
+	chatGPTResponse, err := services.ProcessTextWithChatGPT(extractedText)
 	if err != nil {
-		utils.HandleError(c, http.StatusInternalServerError, "ChatGPT processing failed", err)
+		utils.HandleError(c, http.StatusInternalServerError, "Failed to process text with ChatGPT", err)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"extracted_text":   text,
-		"chatgpt_response": response,
+		"extracted_text":  extractedText,
+		"chatgpt_summary": chatGPTResponse,
 	})
 }
